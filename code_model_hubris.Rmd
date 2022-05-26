@@ -61,7 +61,8 @@ theme_AP <- function() {
 }
 
 # Load the packages
-loadPackages(c("data.table", "tidyverse", "cowplot", "scales", "patchwork"))
+loadPackages(c("data.table", "tidyverse", "cowplot", "scales", "patchwork", 
+               "ggpubr"))
 
 # Set checkpoint
 dir.create(".checkpoint")
@@ -196,4 +197,111 @@ cyclomatic.plot
 
 plot_grid(code.plot, cyclomatic.plot, ncol = 2, labels = "auto", 
           rel_widths = c(0.45, 0.55))
+```
+
+# Physical limits to computation
+
+```{r limits, fig.height=2.3, fig.width=5, warning=FALSE}
+
+# MOORE'S LAW AND COMPUTATIONAL CAPACITY ---------------------------------------
+
+transistors <- fread("transistors-per-microprocessor.csv")
+supercomputers <- fread("supercomputer-power-flops.csv")
+
+a <- transistors %>%
+  ggplot(., aes(Year, `Transistors per microprocessor`)) +
+  geom_line() +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(10^.x))) + 
+  annotation_logticks(sides = "l") +
+  labs(x = "Year", y = "Nº of transistors") +
+  geom_point(size = 0.8) +
+  theme_AP()
+
+b <- supercomputers %>%
+  ggplot(., aes(Year, `Floating-Point Operations per Second`)) +
+  geom_line() +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(10^.x))) + 
+  annotation_logticks(sides = "l") +
+  labs(x = "Year", y = "FLOPS per second") +
+  geom_point(size = 0.8) +
+  theme_AP()
+
+plot_grid(a, b, ncol = 2, labels = "auto")
+```
+
+```{r plot_all, fig.height=3, fig.width=4.6, warning=FALSE}
+
+# 50 YEARS OF MICROPROCESSOR TREND DATA ---------------------------------------
+
+watts <- fread("watts.txt", col.names = c("Year", "Typical power (Watts)"), 
+               colClasses = c("numeric", "numeric")) 
+cores <- fread("cores.txt", col.names = c("Year", "Number of logical cores"), 
+               colClasses = c("numeric", "numeric"))
+frequency <- fread("frequency.txt", col.names = c("Year", "Frequency (MHz)"), 
+                   colClasses = c("numeric", "numeric"))
+specint <- fread("specint.txt", 
+                 col.names = c("Year", "Single-thread performance \n (SpecINT x $10^3$)"), 
+                 colClasses = c("numeric", "numeric"))
+transistors <- fread("transistors.txt", col.names = c("Year", "Transistors (thousands)"), 
+                     colClasses = c("numeric", "numeric"))
+
+list_dt <- list(watts, cores, frequency, specint, transistors)
+
+all <- Reduce(function(...) merge(..., all = TRUE), list_dt)
+
+colNames_dt <- colnames(all)[-1]
+
+# Plot
+microprocessor.data <- melt(all, measure.vars = colNames_dt) %>%
+  ggplot(., aes(Year, value, color = variable)) + 
+  geom_point() + 
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(10^.x))) + 
+  annotation_logticks(sides = "l") +
+  labs(x = "Year", y  = "") +
+  scale_color_discrete(name = "") +
+  theme_AP() + 
+  theme(legend.position = c(0.25, 0.78))
+
+microprocessor.data
+```
+
+```{r dark_silicon, fig.height=2.5, fig.width=2.5}
+
+# FRACTION OF DARK SILICON AS A FUNCTION OF TECHNOLOGY -------------------------
+
+dark_silicon <- fread("dark_silicon_percentage.csv")
+colNames <- c("Size", "Active")
+setnames(dark_silicon, c("V1", "V2"), colNames)
+
+dark_silicon <- dark_silicon[, `Dark silicon`:= 1 - Active] 
+
+# PLOT
+dark.silicon.plot <- melt(dark_silicon, measure.vars = c("Active", "Dark silicon")) %>%
+  .[, Size:= factor(Size, levels = c("45nm", "32nm", "22nm", 
+                                     "16nm", "11nm", "8nm"))] %>%
+  ggplot(., aes(Size, value, fill = variable)) +
+  scale_fill_manual(values = c("white", "black"), name = "") +
+  geom_bar(stat = "identity", position = "fill", color = "black") +
+  scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+  labs(x = "", y = "Fraction") +
+  theme_AP() +
+  theme(legend.position = "top")
+
+dark.silicon.plot
+```
+
+```{r combine_plots, dependson=c("dark_silicon", "plot_all"), fig.height=3, fig.width=5.5}
+
+# MERGE PLOTS ------------------------------------------------------------------
+
+ggarrange(microprocessor.data + 
+            theme(legend.text = element_text(size = 8), 
+                  legend.position = c(0.36, 0.83), 
+                  legend.key.size = unit(0.2, "lines")), 
+          dark.silicon.plot + 
+            theme(legend.box.margin=margin(-2,-7,-7,-7)), ncol = 2, 
+                  labels = "auto", widths = c(0.65, 0.45))
 ```

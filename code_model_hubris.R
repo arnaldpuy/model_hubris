@@ -160,3 +160,86 @@ cyclomatic.plot
 plot_grid(code.plot, cyclomatic.plot, ncol = 2, labels = "auto", 
           rel_widths = c(0.45, 0.55))
 
+
+
+transistors <- fread("transistors-per-microprocessor.csv")
+supercomputers <- fread("supercomputer-power-flops.csv")
+
+a <- transistors %>%
+  ggplot(., aes(Year, `Transistors per microprocessor`)) +
+  geom_line() +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(10^.x))) + 
+  annotation_logticks(sides = "l") +
+  geom_point(size = 0.8) +
+  theme_AP()
+
+b <- supercomputers %>%
+  ggplot(., aes(Year, `Floating-Point Operations per Second`)) +
+  geom_line() +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(10^.x))) + 
+  annotation_logticks(sides = "l") +
+  labs(x = "Year", y = "FLOPS per second") +
+  geom_point(size = 0.8) +
+  theme_AP()
+
+plot_grid(a, b, ncol = 2, labels = "auto")
+
+
+
+
+watts <- fread("watts.txt", col.names = c("Year", "Typical power (Watts)"), 
+               colClasses = c("numeric", "numeric")) 
+cores <- fread("cores.txt", col.names = c("Year", "Number of logical cores"), 
+               colClasses = c("numeric", "numeric"))
+frequency <- fread("frequency.txt", col.names = c("Year", "Frequency (MHz)"), 
+                   colClasses = c("numeric", "numeric"))
+specint <- fread("specint.txt", 
+                 col.names = c("Year", "Single-thread performance \n (SpecINT x $10^3$)"), 
+                 colClasses = c("numeric", "numeric"))
+transistors <- fread("transistors.txt", col.names = c("Year", "Transistors (thousands)"), 
+                     colClasses = c("numeric", "numeric"))
+
+list_dt <- list(watts, cores, frequency, specint, transistors)
+
+all <- Reduce(function(...) merge(..., all = TRUE), list_dt)
+
+colNames_dt <- colnames(all)[-1]
+
+microprocessor.data <- melt(all, measure.vars = colNames_dt) %>%
+  ggplot(., aes(Year, value, color = variable)) + 
+  geom_point() + 
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(10^.x))) + 
+  annotation_logticks(sides = "l") +
+  labs(x = "Year", y  = "") +
+  scale_color_discrete(name = "") +
+  theme_AP() + 
+  theme(legend.position = c(0.25, 0.75))
+
+rev(nm_sizes)
+
+dark_silicon <- fread("dark_silicon.csv")
+nm_sizes <- dark_silicon$Size
+
+
+
+dark_silicon[, Size:= factor(Size, levels = rev(nm_sizes))]
+dark_silicon[, Size:= paste(Size, "nm", sep = "")]
+dark_silicon[, `Dark silicon`:= 1 - Capacitance] %>%
+  .[, Year:= NULL]
+setnames(dark_silicon, "Capacitance", "Active")
+
+
+dark.silicon.plot <- melt(dark_silicon, measure.vars = colnames(dark_silicon)[-1]) %>%
+  ggplot(., aes(Size, value, fill = variable)) + 
+  geom_bar(stat = "identity", position = "fill") +
+  theme_AP()
+
+ggpubr::ggarrange(microprocessor.data, dark.silicon.plot, ncol = 2, 
+                  labels = "auto", widths = c(0.65, 0.45))
+
+
+plot_grid(microprocessor.data, dark.silicon.plot, ncols = 2, labels = "auto", 
+          rel_width = c(0.65, 0.45))
