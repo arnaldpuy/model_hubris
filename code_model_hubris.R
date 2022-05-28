@@ -1,8 +1,8 @@
-## ----setup, include=FALSE--------------------------------------------------------
+## ----setup, include=FALSE------------------------------------------------------------
 knitr::opts_chunk$set(echo = TRUE, dev = "tikz", cache = TRUE)
 
 
-## ---- results="hide", message=FALSE, warning=FALSE, cache=FALSE------------------
+## ---- results="hide", message=FALSE, warning=FALSE, cache=FALSE----------------------
 
 # PRELIMINARY ------------------------------------------------------------------
 
@@ -30,7 +30,8 @@ theme_AP <- function() {
 }
 
 # Load the packages
-loadPackages(c("data.table", "tidyverse", "cowplot", "scales", "patchwork"))
+loadPackages(c("data.table", "tidyverse", "cowplot", "scales", "patchwork", 
+               "ggpubr"))
 
 # Set checkpoint
 dir.create(".checkpoint")
@@ -41,7 +42,7 @@ checkpoint("2022-05-20",
            checkpointLocation = getwd())
 
 
-## ----simulations_dimensions, fig.height=2.5, fig.width=2.5, warning=FALSE--------
+## ----simulations_dimensions, fig.height=2.5, fig.width=2.5, warning=FALSE------------
 
 # EXPLOSION OF THE UNCERTAINTY SPACE -------------------------------------------
 
@@ -108,7 +109,7 @@ plot_grid(b, c, a, ncol = 3, labels = "auto",
           rel_widths = c(0.47, 0.28, 0.28), align = "tb")
 
 
-## ----code_lines, fig.height=2.5, fig.width=2.5-----------------------------------
+## ----code_lines, fig.height=2.5, fig.width=2.5---------------------------------------
 
 # LINES OF CODE ----------------------------------------------------------------
 
@@ -129,7 +130,7 @@ code.plot <- code %>%
 code.plot
 
 
-## ----cyclomatic, fig.height=2.5, fig.width=3-------------------------------------
+## ----cyclomatic, fig.height=2.5, fig.width=3-----------------------------------------
 
 # CYCLOMATIC COMPLEXITIES ------------------------------------------------------
 
@@ -161,6 +162,9 @@ plot_grid(code.plot, cyclomatic.plot, ncol = 2, labels = "auto",
           rel_widths = c(0.45, 0.55))
 
 
+## ----limits, fig.height=2.3, fig.width=5, warning=FALSE------------------------------
+
+# MOORE'S LAW AND COMPUTATIONAL CAPACITY ---------------------------------------
 
 transistors <- fread("transistors-per-microprocessor.csv")
 supercomputers <- fread("supercomputer-power-flops.csv")
@@ -171,6 +175,7 @@ a <- transistors %>%
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
                 labels = trans_format("log10", math_format(10^.x))) + 
   annotation_logticks(sides = "l") +
+  labs(x = "Year", y = "Nº of transistors") +
   geom_point(size = 0.8) +
   theme_AP()
 
@@ -187,7 +192,9 @@ b <- supercomputers %>%
 plot_grid(a, b, ncol = 2, labels = "auto")
 
 
+## ----plot_all, fig.height=3, fig.width=4.6, warning=FALSE----------------------------
 
+# 50 YEARS OF MICROPROCESSOR TREND DATA ---------------------------------------
 
 watts <- fread("watts.txt", col.names = c("Year", "Typical power (Watts)"), 
                colClasses = c("numeric", "numeric")) 
@@ -207,6 +214,7 @@ all <- Reduce(function(...) merge(..., all = TRUE), list_dt)
 
 colNames_dt <- colnames(all)[-1]
 
+# Plot
 microprocessor.data <- melt(all, measure.vars = colNames_dt) %>%
   ggplot(., aes(Year, value, color = variable)) + 
   geom_point() + 
@@ -216,30 +224,174 @@ microprocessor.data <- melt(all, measure.vars = colNames_dt) %>%
   labs(x = "Year", y  = "") +
   scale_color_discrete(name = "") +
   theme_AP() + 
-  theme(legend.position = c(0.25, 0.75))
+  theme(legend.position = c(0.25, 0.78))
 
-rev(nm_sizes)
-
-dark_silicon <- fread("dark_silicon.csv")
-nm_sizes <- dark_silicon$Size
+microprocessor.data
 
 
+## ----dark_silicon, fig.height=2.5, fig.width=2.5-------------------------------------
 
-dark_silicon[, Size:= factor(Size, levels = rev(nm_sizes))]
-dark_silicon[, Size:= paste(Size, "nm", sep = "")]
-dark_silicon[, `Dark silicon`:= 1 - Capacitance] %>%
-  .[, Year:= NULL]
-setnames(dark_silicon, "Capacitance", "Active")
+# FRACTION OF DARK SILICON AS A FUNCTION OF TECHNOLOGY -------------------------
+
+dark_silicon <- fread("dark_silicon_percentage.csv")
+colNames <- c("Size", "Active")
+setnames(dark_silicon, c("V1", "V2"), colNames)
+
+dark_silicon <- dark_silicon[, `Dark silicon`:= 1 - Active] 
+
+# PLOT
+dark.silicon.plot <- melt(dark_silicon, measure.vars = c("Active", "Dark silicon")) %>%
+  .[, Size:= factor(Size, levels = c("45nm", "32nm", "22nm", 
+                                     "16nm", "11nm", "8nm"))] %>%
+  ggplot(., aes(Size, value, fill = variable)) +
+  scale_fill_manual(values = c("white", "black"), name = "") +
+  geom_bar(stat = "identity", position = "fill", color = "black") +
+  scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+  labs(x = "", y = "Fraction") +
+  theme_AP() +
+  theme(legend.position = "top")
+
+dark.silicon.plot
 
 
-dark.silicon.plot <- melt(dark_silicon, measure.vars = colnames(dark_silicon)[-1]) %>%
-  ggplot(., aes(Size, value, fill = variable)) + 
-  geom_bar(stat = "identity", position = "fill") +
-  theme_AP()
+## ----combine_plots, dependson=c("dark_silicon", "plot_all"), fig.height=3, fig.width=5.5----
 
-ggpubr::ggarrange(microprocessor.data, dark.silicon.plot, ncol = 2, 
+# MERGE PLOTS ------------------------------------------------------------------
+
+ggarrange(microprocessor.data + 
+            theme(legend.text = element_text(size = 8), 
+                  legend.position = c(0.36, 0.83), 
+                  legend.key.size = unit(0.2, "lines")), 
+          dark.silicon.plot + 
+            theme(legend.box.margin=margin(-2,-7,-7,-7)), ncol = 2, 
                   labels = "auto", widths = c(0.65, 0.45))
 
 
-plot_grid(microprocessor.data, dark.silicon.plot, ncols = 2, labels = "auto", 
-          rel_width = c(0.65, 0.45))
+## ----legacy--------------------------------------------------------------------------
+
+# READ IN DATASET -------------------------------------------------------------
+
+# Read in dataset --------------------------------------------------------------
+
+file <- "/Users/arnaldpuy/Documents/papers/ghms_bibliometric/code_ghms_bibliometric/full.dt.csv"
+
+full.dt <- fread(file = file)
+
+# Create vector with name of models (file "full.dt.csv" is already organized
+# following the order of this vector) ------------------------------------------
+
+models <- c("WaterGAP", "PCR-GLOBWB", "MATSIRO", "H08", "JULES-W1", "MPI-HM", 
+            "MHM", "LPJmL", "CWatM", "CLM", "DBHM", "ORCHIDEE", "GR4J")
+
+# Analyse dataset --------------------------------------------------------------
+
+dt.use <- full.dt[, .N, .(Model, university.first)] %>%
+  dcast(., university.first~ Model, value.var = "N")
+
+for(j in seq_along(dt.use)){
+  set(dt.use, i = which(is.na(dt.use[[j]]) & is.numeric(dt.use[[j]])), j = j, value = 0)
+}
+
+# Total number each institute uses a model
+dt.use[, total:= rowSums(.SD), .SDcols = models]
+
+# Turn lowercase of institutions except acronyms
+exceptions <- c("USA", "UK", "CNRS", "IIASA", "DOE", "PCSHE", "IIT", "NCAR", 
+                "NOAA", "KICT", "CSIRO", "INRAE")
+
+pattern <- sprintf("(?:%s)(*SKIP)(*FAIL)|\\b([A-Z])(\\w+)", 
+                   paste0(exceptions, collapse = "|"))
+
+dt.use <- dt.use[, university.first:= gsub(pattern, "\\1\\L\\2", university.first, perl = TRUE)]
+
+# Calculate fraction of studies with attachment
+tmp <- dt.use[, lapply(.SD, function(x) x / total), .SDcols = models] %>%
+  .[, lapply(.SD, round, 2), .SDcols = models] 
+
+# RETRIEVE MAX VALUES PER INSTITUTE ############################################
+
+matrix.values <- as.matrix(tmp)
+colIndex <- apply(matrix.values, 1, which.max)
+
+# Add column for totals
+total.studies <- dt.use$total
+total.dt <- cbind(matrix.values, total.studies)
+
+out <- vector()
+for(i in 1:length(colIndex)) {
+  out[i] <- matrix.values[[i, colIndex[i]]]
+}
+
+list_institutes <- dt.use$university.first
+
+dt.complete <- cbind(matrix.values, out, total.studies) %>%
+  data.table()  %>%
+  cbind(list_institutes, .)
+
+# Compute some statistics on the vector for institutes with more than 5 studies
+f <- c(mean, median, min, max)
+sapply(f, function(f) f(dt.complete[, out][total.studies >= 5], na.rm = TRUE))
+
+
+## ----plot.legacy, dependson="legacy", fig.height=2.5, fig.width=2.5------------------
+
+# PLOT ------------------------------------------------------------------------
+
+histo.plot <- dt.complete[total.studies >= 5, .(out)] %>%
+  ggplot(., aes(out)) +
+  geom_histogram() +
+  labs(x = "", y = "Counts") +
+  theme_AP() +
+  theme(plot.margin = margin(b = -0.5, unit = "cm"), 
+        axis.ticks.x = element_blank(), 
+        axis.text.x = element_blank())
+
+box.plot <- dt.complete[total.studies >= 5, .(out)] %>%
+  ggplot(., aes(out)) +
+  geom_boxplot() +
+  scale_y_continuous(breaks = pretty_breaks(n = 3)) +
+  labs(x = "Fraction", y = "") +
+  theme_AP() +
+  theme(axis.ticks.y = element_blank(), 
+        axis.text.y = element_blank())
+
+plot_grid(histo.plot, box.plot, ncol = 1, rel_heights = c(0.7, 0.3), align = "v")
+
+
+## ----legacy_institute, dependson="legacy", fig.height=4.7, fig.width=6, warning=FALSE----
+
+# PLOT USE OF MODEL PER INSTITUTE ----------------------------------------------
+
+# Plot only the first 20
+
+a <- dt.use[order(-total.studies)][1:20] %>%
+  melt(., measure.vars = models) %>%
+  na.omit() %>%
+  .[, variable:= factor(variable, levels = sort(models))] %>%
+  ggplot(., aes(value, university.first, fill = variable)) + 
+  scale_y_discrete(limits = rev) +
+  labs(x = "Nº of articles", y = "") +
+  scale_fill_discrete(name = "Model") +
+  geom_bar(position = "stack", stat = "identity") + 
+  theme_AP() + 
+  theme(legend.position = "none", 
+        axis.text.y = element_text(size = 9))
+
+b <- dt.complete[order(-total.studies)][1:20] %>%
+  melt(., measure.vars = models)%>%
+  na.omit() %>%
+  .[, variable:= factor(variable, levels = sort(models))] %>%
+  ggplot(., aes(value, list_institutes, fill = variable)) + 
+  scale_y_discrete(limits = rev) +
+  labs(x = "Fraction", y = "") +
+  scale_fill_discrete(name = "Model") +
+  scale_x_continuous(breaks = pretty_breaks(n = 3)) +
+  geom_bar(position = "fill", stat = "identity") + 
+  theme_AP() + 
+  theme(axis.text.y = element_blank(), 
+        legend.position = "none")
+
+legend <- get_legend(a + theme(legend.position = "top"))
+bottom <- plot_grid(a, b, ncol = 2, labels = "auto", rel_widths = c(0.75 , 0.25))
+ggarrange(legend, bottom, nrow = 2, heights = c(0.15, 0.85))
+

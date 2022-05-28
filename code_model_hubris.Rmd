@@ -305,3 +305,134 @@ ggarrange(microprocessor.data +
             theme(legend.box.margin=margin(-2,-7,-7,-7)), ncol = 2, 
                   labels = "auto", widths = c(0.65, 0.45))
 ```
+
+# Institutional attachment to large models
+
+```{r legacy}
+
+# READ IN DATASET -------------------------------------------------------------
+
+# Read in dataset --------------------------------------------------------------
+
+file <- "/Users/arnaldpuy/Documents/papers/ghms_bibliometric/code_ghms_bibliometric/full.dt.csv"
+
+full.dt <- fread(file = file)
+
+# Create vector with name of models (file "full.dt.csv" is already organized
+# following the order of this vector) ------------------------------------------
+
+models <- c("WaterGAP", "PCR-GLOBWB", "MATSIRO", "H08", "JULES-W1", "MPI-HM", 
+            "MHM", "LPJmL", "CWatM", "CLM", "DBHM", "ORCHIDEE", "GR4J")
+
+# Analyse dataset --------------------------------------------------------------
+
+dt.use <- full.dt[, .N, .(Model, university.first)] %>%
+  dcast(., university.first~ Model, value.var = "N")
+
+for(j in seq_along(dt.use)){
+  set(dt.use, i = which(is.na(dt.use[[j]]) & is.numeric(dt.use[[j]])), j = j, value = 0)
+}
+
+# Total number each institute uses a model
+dt.use[, total:= rowSums(.SD), .SDcols = models]
+
+# Turn lowercase of institutions except acronyms
+exceptions <- c("USA", "UK", "CNRS", "IIASA", "DOE", "PCSHE", "IIT", "NCAR", 
+                "NOAA", "KICT", "CSIRO", "INRAE")
+
+pattern <- sprintf("(?:%s)(*SKIP)(*FAIL)|\\b([A-Z])(\\w+)", 
+                   paste0(exceptions, collapse = "|"))
+
+dt.use <- dt.use[, university.first:= gsub(pattern, "\\1\\L\\2", university.first, perl = TRUE)]
+
+# Calculate fraction of studies with attachment
+tmp <- dt.use[, lapply(.SD, function(x) x / total), .SDcols = models] %>%
+  .[, lapply(.SD, round, 2), .SDcols = models] 
+
+# RETRIEVE MAX VALUES PER INSTITUTE ############################################
+
+matrix.values <- as.matrix(tmp)
+colIndex <- apply(matrix.values, 1, which.max)
+
+# Add column for totals
+total.studies <- dt.use$total
+total.dt <- cbind(matrix.values, total.studies)
+
+out <- vector()
+for(i in 1:length(colIndex)) {
+  out[i] <- matrix.values[[i, colIndex[i]]]
+}
+
+list_institutes <- dt.use$university.first
+
+dt.complete <- cbind(matrix.values, out, total.studies) %>%
+  data.table()  %>%
+  cbind(list_institutes, .)
+
+# Compute some statistics on the vector for institutes with more than 5 studies
+f <- c(mean, median, min, max)
+sapply(f, function(f) f(dt.complete[, out][total.studies >= 5], na.rm = TRUE))
+```
+
+```{r plot.legacy, dependson="legacy", fig.height=2.5, fig.width=2.5}
+
+# PLOT ------------------------------------------------------------------------
+
+histo.plot <- dt.complete[total.studies >= 5, .(out)] %>%
+  ggplot(., aes(out)) +
+  geom_histogram() +
+  labs(x = "", y = "Counts") +
+  theme_AP() +
+  theme(plot.margin = margin(b = -0.5, unit = "cm"), 
+        axis.ticks.x = element_blank(), 
+        axis.text.x = element_blank())
+
+box.plot <- dt.complete[total.studies >= 5, .(out)] %>%
+  ggplot(., aes(out)) +
+  geom_boxplot() +
+  scale_y_continuous(breaks = pretty_breaks(n = 3)) +
+  labs(x = "Fraction", y = "") +
+  theme_AP() +
+  theme(axis.ticks.y = element_blank(), 
+        axis.text.y = element_blank())
+
+plot_grid(histo.plot, box.plot, ncol = 1, rel_heights = c(0.7, 0.3), align = "v")
+```
+
+```{r legacy_institute, dependson="legacy", fig.height=4.7, fig.width=6, warning=FALSE}
+
+# PLOT USE OF MODEL PER INSTITUTE ----------------------------------------------
+
+# Plot only the first 20
+
+a <- dt.use[order(-total.studies)][1:20] %>%
+  melt(., measure.vars = models) %>%
+  na.omit() %>%
+  .[, variable:= factor(variable, levels = sort(models))] %>%
+  ggplot(., aes(value, university.first, fill = variable)) + 
+  scale_y_discrete(limits = rev) +
+  labs(x = "Nº of articles", y = "") +
+  scale_fill_discrete(name = "Model") +
+  geom_bar(position = "stack", stat = "identity") + 
+  theme_AP() + 
+  theme(legend.position = "none", 
+        axis.text.y = element_text(size = 9))
+
+b <- dt.complete[order(-total.studies)][1:20] %>%
+  melt(., measure.vars = models)%>%
+  na.omit() %>%
+  .[, variable:= factor(variable, levels = sort(models))] %>%
+  ggplot(., aes(value, list_institutes, fill = variable)) + 
+  scale_y_discrete(limits = rev) +
+  labs(x = "Fraction", y = "") +
+  scale_fill_discrete(name = "Model") +
+  scale_x_continuous(breaks = pretty_breaks(n = 3)) +
+  geom_bar(position = "fill", stat = "identity") + 
+  theme_AP() + 
+  theme(axis.text.y = element_blank(), 
+        legend.position = "none")
+
+legend <- get_legend(a + theme(legend.position = "top"))
+bottom <- plot_grid(a, b, ncol = 2, labels = "auto", rel_widths = c(0.75 , 0.25))
+ggarrange(legend, bottom, nrow = 2, heights = c(0.15, 0.85))
+```
