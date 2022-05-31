@@ -11,7 +11,8 @@ This is the R code and materials needed to reproduce the results and the figures
 
 We provide the code in `.R`, `.rmd`and `.pdf`. We also provide the following datasets:
 
-* `lines_code.csv` 
+* `lines_code.csv` (Méndez et al. 2014).
+* `cyclomatic_complexity.csv` (Méndez et al. 2014).
 * `transistors-per-microprocessor.csv`
 * `supercomputer-power-flops.csv`
 * `watts.txt`
@@ -23,4 +24,5 @@ We provide the code in `.R`, `.rmd`and `.pdf`. We also provide the following dat
 
 ## References
 
-Saad-Roy, C. M., Wagner, C. E., Baker, R. E., Morris, S. E., Farrar, J., Graham, A. L., Levin, S. A., Mina, M. J., Metcalf, C. J. E. & Grenfell, B. T. Immune life history, vaccination, and the dynamics of SARS-CoV-2 over the next 5 years. Science 370, 811:818. doi:10.1126/science.abd7343 (Nov. 2020).
+M. Méndez, F. G. Tinetti, and J. L. Overbey. Climate Models: challenges for Fortran
+development tools. IEEE, 2014, 6-12. doi: 10.1109/SE-HPCCSE.2014.7.
