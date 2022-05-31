@@ -332,6 +332,7 @@ dt.complete <- cbind(matrix.values, out, total.studies) %>%
 f <- c(mean, median, min, max)
 sapply(f, function(f) f(dt.complete[, out][total.studies >= 5], na.rm = TRUE))
 
+dt.complete[total.studies >= 20 & out >= 0.9]
 
 ## ----plot.legacy, dependson="legacy", fig.height=2.5, fig.width=2.5------------------
 
@@ -394,4 +395,224 @@ b <- dt.complete[order(-total.studies)][1:20] %>%
 legend <- get_legend(a + theme(legend.position = "top"))
 bottom <- plot_grid(a, b, ncol = 2, labels = "auto", rel_widths = c(0.75 , 0.25))
 ggarrange(legend, bottom, nrow = 2, heights = c(0.15, 0.85))
+
+
+
+
+
+vector_institutes <- dt.complete[total.studies >= 11 & out >= 0.9][, list_institutes]
+full.dt[, university.first:= gsub(pattern, "\\1\\L\\2", university.first, perl = TRUE)]
+prove <- full.dt[university.first %chin% vector_institutes, ] %>%
+  .[, .(university.first, year, Model)]
+
+total.per.year <- prove[, .(total = .N), .(university.first, year)]
+
+vec_year <- seq(min(full.dt$year, na.rm = TRUE), max(full.dt$year, na.rm = TRUE), 3)
+
+time_frames <- names_slots <- list()
+for (i in 1:(length(vec_year) - 1)) {
+  
+  time_frames[[i]] <- prove[year >= vec_year[i] & year <= vec_year[i + 1]] %>%
+    .[, .N, .(university.first, year, Model)] %>%
+    dcast(., year + university.first ~ Model, value.var = "N") %>%
+    merge(total.per.year, ., by = c("university.first", "year")) %>%
+    .[, (colnames(.)[-c(1, 2)]):= lapply(.SD, function(x) x / total), 
+      .SDcols = colnames(.)[-c(1, 2)]] %>%
+    melt(., measure.vars = colnames(.)[-c(1:3)]) 
+  
+  names_slots[[i]] <- paste(vec_year[i], vec_year[i + 1], sep = "-")
+  
+}
+
+names(time_frames) <- names_slots
+out.dt <- rbindlist(time_frames, idcol = "Years")
+out.final <- list()
+
+for (i in vector_institutes) {
+  if (i == "INRAE") {
+    
+    out.final[[i]] <- out.dt[university.first == i & variable == "GR4J"]
+  } else if (i == "Potsdam Institut Fur Klimafolgenforschung") {
+    out.final[[i]] <- out.dt[university.first == i & variable == "LPJmL"]
+  } else if (i == "Udice-French Research Universities") {
+    out.final[[i]] <- out.dt[university.first == i & variable == "ORCHIDEE"]
+  } else if(i == "University of Exeter") {
+    out.final[[i]] <- out.dt[university.first == i & variable == "JULES-W1"]
+  } else if(i == "Utrecht University") {
+    out.final[[i]] <- out.dt[university.first == i & variable == "PCR-GLOBWB"]
+  } else if ( i == "Osaka University") {
+    out.final[[i]] <- out.dt[university.first == i & variable == "H08"]
+  }
+}
+
+years.dt <- rbindlist(out.final, idcol = "Institution") %>%
+  .[, .(mean = mean(value, na.rm = TRUE), sd = sd(value, na.rm = TRUE)), .(university.first, Years)]
+
+ggplot(years.dt, aes(Years, mean, color = university.first, group = university.first)) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+  scale_color_discrete(name = "") +
+  labs(x = "", y = "Attachment to favourite model") +
+  theme_AP() + 
+  theme(legend.position = c(0.4, 0.35))
+
+
+
+
+
+
+
+out.dt[university.first == "INRAE" & variable == "GR4J"]
+
+
+
+
+
+
+
+
+
+
+
+for(i in 1:length())
+names(time_frames) <- paste(vec_year, vec_year[, sep =)
+  
+
+rbindlist(time_frames, idcol = "")
+  
+  
+  
+  
+  
+  %>%
+    .[, .(mean = mean(value, na.rm = TRUE), 
+          sd = sd(value, na.rm = TRUE)), .(university.first, year, variable)]
+  
+}
+
+time_frames
+
+
+matrix.values <- as.matrix(tmp)
+colIndex <- apply(matrix.values, 1, which.max)
+
+# Add column for totals
+total.studies <- dt.use$total
+total.dt <- cbind(matrix.values, total.studies)
+
+out <- vector()
+for(i in 1:length(colIndex)) {
+  out[i] <- matrix.values[[i, colIndex[i]]]
+}
+
+
+
+
+out <-  Filter(function(x) !(is.vector(x) | is.null(x) |is_tibble(x)), time_frames)
+
+
+
+
+
+
+full.dt[university.first %chin% vector_institutes, ] %>%
+  .[, .(university.first, year, Model)] %>%
+  .[, .N, .(university.first, year, Model)]
+
+
+
+
+full.dt[university.first %chin% vector_institutes, ] %>%
+  .[, .(university.first, year, Model)] %>%
+  .[, .N, .(year, Model)]
+
+
+
+
+
+
+
+
+
+
+
+setDT(full.dt, key = "university.first")[J(vector_institutes)][, .(university.first, year, Model)]
+
+full.dt[university.first %chin% vector_institutes, ][, .(university.first, year, Model)]
+
+
+full.dt[dt$university.first %like% vector_institutes][, .(university.first, year, Model)]
+
+full.dt[vector_institutes %chin% university.first]
+
+
+
+# READ IN DATASET -------------------------------------------------------------
+
+# Read in dataset --------------------------------------------------------------
+
+file <- "/Users/arnaldpuy/Documents/papers/ghms_bibliometric/code_ghms_bibliometric/full.dt.csv"
+
+full.dt <- fread(file = file)
+
+# Create vector with name of models (file "full.dt.csv" is already organized
+# following the order of this vector) ------------------------------------------
+
+models <- c("WaterGAP", "PCR-GLOBWB", "MATSIRO", "H08", "JULES-W1", "MPI-HM", 
+            "MHM", "LPJmL", "CWatM", "CLM", "DBHM", "ORCHIDEE", "GR4J")
+
+# Analyse dataset --------------------------------------------------------------
+
+dt.use <- full.dt[, .N, .(Model, university.first, year)] %>%
+  dcast(., year + university.first~ Model, value.var = "N")
+
+for(j in seq_along(dt.use)){
+  set(dt.use, i = which(is.na(dt.use[[j]]) & is.numeric(dt.use[[j]])), j = j, value = 0)
+}
+
+# Total number each institute uses a model
+dt.use[, total:= rowSums(.SD), .SDcols = models]
+
+# Turn lowercase of institutions except acronyms
+exceptions <- c("USA", "UK", "CNRS", "IIASA", "DOE", "PCSHE", "IIT", "NCAR", 
+                "NOAA", "KICT", "CSIRO", "INRAE")
+
+pattern <- sprintf("(?:%s)(*SKIP)(*FAIL)|\\b([A-Z])(\\w+)", 
+                   paste0(exceptions, collapse = "|"))
+
+dt.use <- dt.use[, university.first:= gsub(pattern, "\\1\\L\\2", university.first, perl = TRUE)]
+
+# Calculate fraction of studies with attachment
+tmp <- dt.use[, lapply(.SD, function(x) x / total), .SDcols = models] %>%
+  .[, lapply(.SD, round, 2), .SDcols = models] 
+
+# RETRIEVE MAX VALUES PER INSTITUTE ############################################
+
+matrix.values <- as.matrix(tmp)
+colIndex <- apply(matrix.values, 1, which.max)
+
+# Add column for totals
+total.studies <- dt.use$total
+total.dt <- cbind(matrix.values, total.studies)
+
+out <- vector()
+for(i in 1:length(colIndex)) {
+  out[i] <- matrix.values[[i, colIndex[i]]]
+}
+
+list_institutes <- dt.use$university.first
+
+dt.complete <- cbind(matrix.values, out, total.studies) %>%
+  data.table()  %>%
+  cbind(list_institutes, .)
+
+
+
+
+
+
+
+
 
