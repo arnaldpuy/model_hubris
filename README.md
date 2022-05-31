@@ -1,3 +1,4 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6598848.svg)](https://doi.org/10.5281/zenodo.6598848)
 
 # Mind the hubris in mathematical modeling
 

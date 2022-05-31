@@ -306,7 +306,7 @@ ggarrange(microprocessor.data +
                   labels = "auto", widths = c(0.65, 0.45))
 ```
 
-# Institutional attachment to large models
+# Model attachment
 
 ```{r legacy}
 
