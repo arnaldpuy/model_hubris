@@ -144,7 +144,7 @@ plot_grid(b, c, a, ncol = 3, labels = "auto",
           rel_widths = c(0.47, 0.28, 0.28), align = "tb")
 ```
 
-# Black boxing processes
+# Blackboxing 
 
 ```{r code_lines, fig.height=2.5, fig.width=2.5}
 
@@ -199,7 +199,7 @@ plot_grid(code.plot, cyclomatic.plot, ncol = 2, labels = "auto",
           rel_widths = c(0.45, 0.55))
 ```
 
-# Physical limits to computation
+# Computational exhaustion
 
 ```{r limits, fig.height=2.3, fig.width=5, warning=FALSE}
 
