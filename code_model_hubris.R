@@ -1,8 +1,8 @@
-## ----setup, include=FALSE------------------------------------------------------------
+## ----setup, include=FALSE----------------------------------------------------------
 knitr::opts_chunk$set(echo = TRUE, dev = "tikz", cache = TRUE)
 
 
-## ---- results="hide", message=FALSE, warning=FALSE, cache=FALSE----------------------
+## ---- results="hide", message=FALSE, warning=FALSE, cache=FALSE--------------------
 
 # PRELIMINARY ------------------------------------------------------------------
 
@@ -31,7 +31,7 @@ theme_AP <- function() {
 
 # Load the packages
 loadPackages(c("data.table", "tidyverse", "cowplot", "scales", "patchwork", 
-               "ggpubr"))
+               "ggpubr", "benchmarkme", "parallel"))
 
 # Set checkpoint
 dir.create(".checkpoint")
@@ -42,7 +42,7 @@ checkpoint("2022-05-20",
            checkpointLocation = getwd())
 
 
-## ----simulations_dimensions, fig.height=2.5, fig.width=2.5, warning=FALSE------------
+## ----simulations_dimensions, fig.height=2.5, fig.width=2.5, warning=FALSE----------
 
 # EXPLOSION OF THE UNCERTAINTY SPACE -------------------------------------------
 
@@ -109,7 +109,7 @@ plot_grid(b, c, a, ncol = 3, labels = "auto",
           rel_widths = c(0.47, 0.28, 0.28), align = "tb")
 
 
-## ----code_lines, fig.height=2.5, fig.width=2.5---------------------------------------
+## ----code_lines, fig.height=2.5, fig.width=2.5-------------------------------------
 
 # LINES OF CODE ----------------------------------------------------------------
 
@@ -130,7 +130,7 @@ code.plot <- code %>%
 code.plot
 
 
-## ----cyclomatic, fig.height=2.5, fig.width=3-----------------------------------------
+## ----cyclomatic, fig.height=2.5, fig.width=3---------------------------------------
 
 # CYCLOMATIC COMPLEXITIES ------------------------------------------------------
 
@@ -162,7 +162,7 @@ plot_grid(code.plot, cyclomatic.plot, ncol = 2, labels = "auto",
           rel_widths = c(0.45, 0.55))
 
 
-## ----limits, fig.height=2.3, fig.width=5, warning=FALSE------------------------------
+## ----limits, fig.height=2.3, fig.width=5, warning=FALSE----------------------------
 
 # MOORE'S LAW AND COMPUTATIONAL CAPACITY ---------------------------------------
 
@@ -192,7 +192,7 @@ b <- supercomputers %>%
 plot_grid(a, b, ncol = 2, labels = "auto")
 
 
-## ----plot_all, fig.height=3, fig.width=4.6, warning=FALSE----------------------------
+## ----plot_all, fig.height=3, fig.width=4.6, warning=FALSE--------------------------
 
 # 50 YEARS OF MICROPROCESSOR TREND DATA ---------------------------------------
 
@@ -229,7 +229,7 @@ microprocessor.data <- melt(all, measure.vars = colNames_dt) %>%
 microprocessor.data
 
 
-## ----dark_silicon, fig.height=2.5, fig.width=2.5-------------------------------------
+## ----dark_silicon, fig.height=2.5, fig.width=2.5-----------------------------------
 
 # FRACTION OF DARK SILICON AS A FUNCTION OF TECHNOLOGY -------------------------
 
@@ -267,13 +267,13 @@ ggarrange(microprocessor.data +
                   labels = "auto", widths = c(0.65, 0.45))
 
 
-## ----legacy--------------------------------------------------------------------------
+## ----legacy------------------------------------------------------------------------
 
 # READ IN DATASET -------------------------------------------------------------
 
 # Read in dataset --------------------------------------------------------------
 
-file <- "/Users/arnaldpuy/Documents/papers/ghms_bibliometric/code_ghms_bibliometric/full.dt.csv"
+file <- "full.dt.csv"
 
 full.dt <- fread(file = file)
 
@@ -332,9 +332,8 @@ dt.complete <- cbind(matrix.values, out, total.studies) %>%
 f <- c(mean, median, min, max)
 sapply(f, function(f) f(dt.complete[, out][total.studies >= 5], na.rm = TRUE))
 
-dt.complete[total.studies >= 20 & out >= 0.9]
 
-## ----plot.legacy, dependson="legacy", fig.height=2.5, fig.width=2.5------------------
+## ----plot.legacy, dependson="legacy", fig.height=2.5, fig.width=2.5----------------
 
 # PLOT ------------------------------------------------------------------------
 
@@ -356,7 +355,9 @@ box.plot <- dt.complete[total.studies >= 5, .(out)] %>%
   theme(axis.ticks.y = element_blank(), 
         axis.text.y = element_blank())
 
-plot_grid(histo.plot, box.plot, ncol = 1, rel_heights = c(0.7, 0.3), align = "v")
+plot.hist <- plot_grid(histo.plot, box.plot, ncol = 1, rel_heights = c(0.7, 0.3), align = "v")
+
+plot.hist 
 
 
 ## ----legacy_institute, dependson="legacy", fig.height=4.7, fig.width=6, warning=FALSE----
@@ -397,8 +398,9 @@ bottom <- plot_grid(a, b, ncol = 2, labels = "auto", rel_widths = c(0.75 , 0.25)
 ggarrange(legend, bottom, nrow = 2, heights = c(0.15, 0.85))
 
 
+## ----attachment_year, dependson="legacy", fig.height=2.8, fig.width=4--------------
 
-
+# STUDY OF MODEL ATTACHMENT THROUGH YEARS -------------------------------------
 
 vector_institutes <- dt.complete[total.studies >= 11 & out >= 0.9][, list_institutes]
 full.dt[, university.first:= gsub(pattern, "\\1\\L\\2", university.first, perl = TRUE)]
@@ -448,171 +450,40 @@ for (i in vector_institutes) {
 years.dt <- rbindlist(out.final, idcol = "Institution") %>%
   .[, .(mean = mean(value, na.rm = TRUE), sd = sd(value, na.rm = TRUE)), .(university.first, Years)]
 
-ggplot(years.dt, aes(Years, mean, color = university.first, group = university.first)) +
+plot.attachment.years <- ggplot(years.dt, aes(Years, mean, color = university.first, group = university.first)) +
   geom_line() +
   geom_point() +
   scale_y_continuous(limits = c(0, 1)) +
   scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
   scale_color_discrete(name = "") +
-  labs(x = "", y = "Attachment to favourite model") +
+  labs(x = "", y = "Attachment to model") +
   theme_AP() + 
-  theme(legend.position = c(0.4, 0.35))
+  theme(legend.position = c(0.48, 0.36), 
+        legend.key.size = unit(0.8, "lines"))
 
+plot.attachment.years
 
 
+## ----merge_attachment, dependson=c("attachment_year", "plot.legacy"), fig.height=2.5, fig.width=6----
 
+# MERGE -----------------------------------------------------------------------
 
+plot_grid(plot.hist, plot.attachment.years, ncol = 2, labels = "auto", rel_widths = c(0.4, 0.6))
 
 
-out.dt[university.first == "INRAE" & variable == "GR4J"]
 
+## ----session_information-----------------------------------------------------------
 
+# SESSION INFORMATION ##########################################################
 
+sessionInfo()
 
+## Return the machine CPU
+cat("Machine:     "); print(get_cpu()$model_name)
 
+## Return number of true cores
+cat("Num cores:   "); print(detectCores(logical = FALSE))
 
-
-
-
-
-
-for(i in 1:length())
-names(time_frames) <- paste(vec_year, vec_year[, sep =)
-  
-
-rbindlist(time_frames, idcol = "")
-  
-  
-  
-  
-  
-  %>%
-    .[, .(mean = mean(value, na.rm = TRUE), 
-          sd = sd(value, na.rm = TRUE)), .(university.first, year, variable)]
-  
-}
-
-time_frames
-
-
-matrix.values <- as.matrix(tmp)
-colIndex <- apply(matrix.values, 1, which.max)
-
-# Add column for totals
-total.studies <- dt.use$total
-total.dt <- cbind(matrix.values, total.studies)
-
-out <- vector()
-for(i in 1:length(colIndex)) {
-  out[i] <- matrix.values[[i, colIndex[i]]]
-}
-
-
-
-
-out <-  Filter(function(x) !(is.vector(x) | is.null(x) |is_tibble(x)), time_frames)
-
-
-
-
-
-
-full.dt[university.first %chin% vector_institutes, ] %>%
-  .[, .(university.first, year, Model)] %>%
-  .[, .N, .(university.first, year, Model)]
-
-
-
-
-full.dt[university.first %chin% vector_institutes, ] %>%
-  .[, .(university.first, year, Model)] %>%
-  .[, .N, .(year, Model)]
-
-
-
-
-
-
-
-
-
-
-
-setDT(full.dt, key = "university.first")[J(vector_institutes)][, .(university.first, year, Model)]
-
-full.dt[university.first %chin% vector_institutes, ][, .(university.first, year, Model)]
-
-
-full.dt[dt$university.first %like% vector_institutes][, .(university.first, year, Model)]
-
-full.dt[vector_institutes %chin% university.first]
-
-
-
-# READ IN DATASET -------------------------------------------------------------
-
-# Read in dataset --------------------------------------------------------------
-
-file <- "/Users/arnaldpuy/Documents/papers/ghms_bibliometric/code_ghms_bibliometric/full.dt.csv"
-
-full.dt <- fread(file = file)
-
-# Create vector with name of models (file "full.dt.csv" is already organized
-# following the order of this vector) ------------------------------------------
-
-models <- c("WaterGAP", "PCR-GLOBWB", "MATSIRO", "H08", "JULES-W1", "MPI-HM", 
-            "MHM", "LPJmL", "CWatM", "CLM", "DBHM", "ORCHIDEE", "GR4J")
-
-# Analyse dataset --------------------------------------------------------------
-
-dt.use <- full.dt[, .N, .(Model, university.first, year)] %>%
-  dcast(., year + university.first~ Model, value.var = "N")
-
-for(j in seq_along(dt.use)){
-  set(dt.use, i = which(is.na(dt.use[[j]]) & is.numeric(dt.use[[j]])), j = j, value = 0)
-}
-
-# Total number each institute uses a model
-dt.use[, total:= rowSums(.SD), .SDcols = models]
-
-# Turn lowercase of institutions except acronyms
-exceptions <- c("USA", "UK", "CNRS", "IIASA", "DOE", "PCSHE", "IIT", "NCAR", 
-                "NOAA", "KICT", "CSIRO", "INRAE")
-
-pattern <- sprintf("(?:%s)(*SKIP)(*FAIL)|\\b([A-Z])(\\w+)", 
-                   paste0(exceptions, collapse = "|"))
-
-dt.use <- dt.use[, university.first:= gsub(pattern, "\\1\\L\\2", university.first, perl = TRUE)]
-
-# Calculate fraction of studies with attachment
-tmp <- dt.use[, lapply(.SD, function(x) x / total), .SDcols = models] %>%
-  .[, lapply(.SD, round, 2), .SDcols = models] 
-
-# RETRIEVE MAX VALUES PER INSTITUTE ############################################
-
-matrix.values <- as.matrix(tmp)
-colIndex <- apply(matrix.values, 1, which.max)
-
-# Add column for totals
-total.studies <- dt.use$total
-total.dt <- cbind(matrix.values, total.studies)
-
-out <- vector()
-for(i in 1:length(colIndex)) {
-  out[i] <- matrix.values[[i, colIndex[i]]]
-}
-
-list_institutes <- dt.use$university.first
-
-dt.complete <- cbind(matrix.values, out, total.studies) %>%
-  data.table()  %>%
-  cbind(list_institutes, .)
-
-
-
-
-
-
-
-
+## Return number of threads
+cat("Num threads: "); print(detectCores(logical = FALSE))
 

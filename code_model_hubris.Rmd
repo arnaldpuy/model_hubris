@@ -62,7 +62,7 @@ theme_AP <- function() {
 
 # Load the packages
 loadPackages(c("data.table", "tidyverse", "cowplot", "scales", "patchwork", 
-               "ggpubr"))
+               "ggpubr", "benchmarkme", "parallel"))
 
 # Set checkpoint
 dir.create(".checkpoint")
@@ -314,7 +314,7 @@ ggarrange(microprocessor.data +
 
 # Read in dataset --------------------------------------------------------------
 
-file <- "/Users/arnaldpuy/Documents/papers/ghms_bibliometric/code_ghms_bibliometric/full.dt.csv"
+file <- "full.dt.csv"
 
 full.dt <- fread(file = file)
 
@@ -511,4 +511,24 @@ plot.attachment.years
 
 plot_grid(plot.hist, plot.attachment.years, ncol = 2, labels = "auto", rel_widths = c(0.4, 0.6))
 
+```
+
+\newpage
+
+# Session information
+
+```{r session_information}
+
+# SESSION INFORMATION ##########################################################
+
+sessionInfo()
+
+## Return the machine CPU
+cat("Machine:     "); print(get_cpu()$model_name)
+
+## Return number of true cores
+cat("Num cores:   "); print(detectCores(logical = FALSE))
+
+## Return number of threads
+cat("Num threads: "); print(detectCores(logical = FALSE))
 ```
